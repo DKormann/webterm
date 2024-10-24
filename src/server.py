@@ -1,9 +1,7 @@
-"""
-flask app to run shell commands and streams all output and results back async
-"""
+#!/usr/bin/env python3
 from flask import Flask, Response, stream_with_context, request, send_from_directory
 from multiprocessing import Queue
-import subprocess, queue, subprocess, threading
+import subprocess, queue, subprocess, threading, sys, os
 
 app = Flask('terminal')
 shell = None
@@ -41,4 +39,10 @@ def subscribe():
   
 app.route('/')(lambda: send_from_directory('static', 'index.html'))
 
-if __name__ == '__main__': app.run(debug = True, port=5000)
+if __name__ == '__main__':
+
+  if os.environ.get('dev'): app.run(debug = True, port=1358)
+  else:
+    threading.Thread(target=lambda: os.system('sleep .5 && open http://localhost:1358')).start()
+    app.run(port=1358)
+
