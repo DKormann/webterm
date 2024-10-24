@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal</title>
+  <style>
+    body{
+      background-color: black;
+      color: white;
+      font-family: monospace;
+      padding: 0;
+      margin: 0;
+      margin-bottom: 2em;
+      --command: rgb(125, 0, 0);
+    }
+    input{
+      all: unset;
+      position: fixed;
+      bottom: 1em;
+      width: 100%;
+      background-color: var(--command);
+      color:white;
+      padding-left: 1em;
+    }
+    #content{
+      padding: 1em;
+      padding-bottom: 2em;
+    }
+    p.command{
+      color: var(--command);
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body> 
+  <input type="text">
+  <div id=content></div>
+  <script>
+    const input = document.querySelector('input');
+    const content = document.querySelector('#content');
+  
+    start_shell();
+    input.addEventListener('keyup', function(e){
+      if(e.key === 'Enter'){
+        send_command(e.target.value);
+        e.target.value = '';
+      }
+    })
+
+    function send_command(command){
+      writeline("\n"+command, 'command')
+      fetch("/run",{
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({command})
+      }).then(res=>res.text()).then(res=>{ console.log(res)});
+    }
+
+    function writeline(text, type){
+      console.log(text, type);
+      lines = text.split('\n');
+      last_p = content.querySelector(`p:last-child`);
+      if (!last_p.classList.contains(type)){
+        lines = [''].concat(lines);
+      }
+      last_p.innerHTML += lines[0];
+      for (line of lines.slice(1)){
+        p = document.createElement('p');
+        p.classList.add(type);
+        p.innerHTML = line;
+        content.appendChild(p);
+      }
+      last_p.scrollIntoView();
+    }
+
+    function start_shell(){
+      content.innerHTML = "<p class=output></p><p class=command></p>";
+      input.focus();
+      fetch('/subscribe').then(res=>res.body.getReader()).then(reader=>{
+        const decoder = new TextDecoder();
+        reader.read().then(
+          function processText({ done, value }) {
+            if (done) {return}
+            writeline(decoder.decode(value, { stream: true }), 'output');
+            return reader.read().then(processText)
+          }
+        )
+      })
+    }
+
+  </script>
+  
+  
+</body>
+</html>
