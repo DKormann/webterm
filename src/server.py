@@ -41,8 +41,9 @@ app.route('/')(lambda: send_from_directory('static', 'index.html'))
 
 if __name__ == '__main__':
 
-  if os.environ.get('dev'): app.run(debug = True, port=1358)
+  if os.environ.get('dev'):
+    app.run(debug = True, port=1358)
   else:
-    threading.Thread(target=lambda: os.system('sleep .5 && open http://localhost:1358')).start()
+    os.system('open http://localhost:1358')
     app.run(port=1358)
 
