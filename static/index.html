@@ -53,6 +53,11 @@
     const input = document.querySelector('input');
     const content = document.querySelector('#content');
     const pathlabel = document.querySelector('#pathlabel');
+
+    let command_history = [];
+    let history_index = 0;
+    let command_options = null;
+    if (localStorage.getItem('command_history')) command_history = JSON.parse(localStorage.getItem('command_history'));
   
     start_shell();
     input.addEventListener('keyup', function(e){
@@ -70,12 +75,24 @@
         body: JSON.stringify({command})
       }).then(res=>res.text()).then(res=>{ console.log(res)});
       update_path()
+      if (!command_history.includes(command)){
+        command_history.push(command);        
+        localStorage.setItem('command_history', JSON.stringify(command_history));
+      }
+    }
+
+    async function command(cmd){
+      let res = await fetch("/command",{
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({command:cmd})
+      })
+      return await res.text();
     }
 
     function update_path(){
-      fetch("/command",{method:'POST', headers:{"Content-Type":"application/json"}, body:JSON.stringify({command:'pwd'})}).then(res=>res.text()).then(res=>{
-        path = res;
-        pathlabel.innerHTML = path;
+      command('pwd').then(res=>{
+        pathlabel.innerHTML = res;
       })
     }
 
@@ -102,18 +119,47 @@
           e.preventDefault();
         }
       }
+      if (e.key === 'ArrowUp'){
+        console.log(command_history);
+        if (command_options === null) command_options = command_history.filter(cmd => cmd.startsWith(input.value));
+        if (-history_index == command_options.length) history_index = 0;
+        history_index -= 1;
+        input.value = command_options[command_options.length + history_index];
+        setTimeout(()=>{input.setSelectionRange(input.value.length, input.value.length);}, 0);
+      }
+      else if (e.key === 'ArrowDown'){
+        if (history_index < 0){
+          history_index += 1;
+          input.value = command_options[command_options.length + history_index];
+          setTimeout(()=>{input.setSelectionRange(input.value.length, input.value.length);}, 0);
+        }
+      }else{
+        history_index = 0;
+        command_options = null;
+      }
+      if (e.key === 'Tab'){
+        e.preventDefault();
+        let words = input.value.split(' ')
+        command(`ls -1d ${words[words.length-1]}*`).then(ls => {
+          console.log(ls)
+          let options = ls.split('\n').filter(x=>x)
+
+          if (options.length === 1) input.value = words.slice(0, -1).join(' ') + ' ' + options[0] + ' '
+          else if (options.length > 1) writeline(options.join(' '), 'output')
+        })
+      }
+        
     })
 
     function start_shell(){
       content.innerHTML = "<p class=output></p><p class=command></p>";
       input.focus();
-      
       fetch('/newsession').then(()=>{
         fetch('/subscribe').then(res=>res.body.getReader()).then(reader=>{
           const decoder = new TextDecoder();
           reader.read().then(
             function processText({ done, value }) {
-              if (done) {return}
+              if (done) return
               writeline(decoder.decode(value, { stream: true }), 'output');
               return reader.read().then(processText)
             }
