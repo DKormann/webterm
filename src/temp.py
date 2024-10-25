@@ -1,0 +1,1 @@
+with open('/tmp/report') as f: print(f.read())

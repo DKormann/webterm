@@ -6,22 +6,34 @@
   <title>Terminal</title>
   <style>
     body{
-      background-color: black;
-      color: white;
       font-family: monospace;
       padding: 0;
       margin: 0;
       margin-bottom: 2em;
       --command: rgb(125, 0, 0);
+      --back: black;
+      --color: white;
+      @media (prefers-color-scheme: light){
+        --command: rgb(229, 50, 62);
+        --back: white;
+        --color: black;
+      }
+      background-color: var(--back);
+      color: var(--color);
     }
-    input{
+    input, #pathlabel{
       all: unset;
       position: fixed;
       bottom: 1em;
       width: 100%;
       background-color: var(--command);
-      color:white;
+      color:var(--color);
       padding-left: 1em;
+    }
+    #pathlabel{
+      bottom:2em;
+      background-color: var(--back);
+      color: var(--command);
     }
     #content{
       padding: 1em;
@@ -35,30 +47,39 @@
 </head>
 <body> 
   <input type="text">
+  <p id="pathlabel" for=input>&lt;path></label>
   <div id=content></div>
   <script>
     const input = document.querySelector('input');
     const content = document.querySelector('#content');
+    const pathlabel = document.querySelector('#pathlabel');
   
     start_shell();
     input.addEventListener('keyup', function(e){
       if(e.key === 'Enter'){
-        send_command(e.target.value);
+        run_command(e.target.value);
         e.target.value = '';
       }
     })
 
-    function send_command(command){
+    function run_command(command){
       writeline("\n"+command, 'command')
       fetch("/run",{
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({command})
       }).then(res=>res.text()).then(res=>{ console.log(res)});
+      update_path()
+    }
+
+    function update_path(){
+      fetch("/command",{method:'POST', headers:{"Content-Type":"application/json"}, body:JSON.stringify({command:'pwd'})}).then(res=>res.text()).then(res=>{
+        path = res;
+        pathlabel.innerHTML = path;
+      })
     }
 
     function writeline(text, type){
-      console.log(text, type);
       lines = text.split('\n');
       last_p = content.querySelector(`p:last-child`);
       if (!last_p.classList.contains(type)){
@@ -74,18 +95,31 @@
       last_p.scrollIntoView();
     }
 
+    input.addEventListener('keydown', e=>{
+      if ((e.ctrlKey || e.metaKey)){
+        if (e.key === 'k'){
+          start_shell();
+          e.preventDefault();
+        }
+      }
+    })
+
     function start_shell(){
       content.innerHTML = "<p class=output></p><p class=command></p>";
       input.focus();
-      fetch('/subscribe').then(res=>res.body.getReader()).then(reader=>{
-        const decoder = new TextDecoder();
-        reader.read().then(
-          function processText({ done, value }) {
-            if (done) {return}
-            writeline(decoder.decode(value, { stream: true }), 'output');
-            return reader.read().then(processText)
-          }
-        )
+      
+      fetch('/newsession').then(()=>{
+        fetch('/subscribe').then(res=>res.body.getReader()).then(reader=>{
+          const decoder = new TextDecoder();
+          reader.read().then(
+            function processText({ done, value }) {
+              if (done) {return}
+              writeline(decoder.decode(value, { stream: true }), 'output');
+              return reader.read().then(processText)
+            }
+          )
+        })
+        update_path();
       })
     }
 
