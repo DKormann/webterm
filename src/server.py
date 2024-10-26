@@ -73,4 +73,6 @@ app.route('/')(lambda: send_from_directory('static', 'index.html'))
 app.route('/<path:path>', endpoint='logo')(lambda path: send_from_directory('static', path))
 
 if __name__ == '__main__':
+  dev = os.environ.get('dev')
   app.run(debug=os.environ.get('dev'), port=1358)
+  if not dev: os.system('open http://localhost:1358')
