@@ -1,1 +1,6 @@
-with open('/tmp/report') as f: print(f.read())
+import os
+
+# Get the default shell from the SHELL environment variable
+default_shell = os.environ.get('SHELL')
+
+print("Default shell:", default_shell)

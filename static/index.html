@@ -115,8 +115,9 @@
     input.addEventListener('keydown', e=>{
       if ((e.ctrlKey || e.metaKey)){
         if (e.key === 'k'){
-          start_shell();
+          content.innerHTML = "<p class=output></p><p class=command></p>";
           e.preventDefault();
+
         }
       }
       if (e.key === 'ArrowUp'){
@@ -141,7 +142,7 @@
         let words = input.value.split(' ')
         command(`ls -1d ${words[words.length-1]}*`).then(ls => {
           let options = ls.split('\n').filter(x=>x)
-          if (options.length === 1) input.value = words.slice(0, -1).join(' ') + ' ' + options[0] + ' '
+          if (options.length === 1) input.value = words.slice(0, -1).join(' ') + ' ' + options[0]
           else if (options.length > 1) writeline(options.join(' '), 'output')
         })
       }
@@ -163,8 +164,7 @@
               }
             )
           })
-      })
-
+        })
       })
     }
 
