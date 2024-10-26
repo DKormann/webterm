@@ -82,10 +82,10 @@
       writeline("\n"+command, 'command')
       post("/run", {command}).then(res=>res.text()).then(res=>console.log(res));
       update_path()
-      if (!command_history.includes(command)){
-        command_history.push(command);        
-        localStorage.setItem('command_history', JSON.stringify(command_history));
-      }
+      command_history.push(command);
+      if (command_history.length > 100) command_history.shift();
+      if (command_history.includes(command)) command_history.splice(command_history.indexOf(command), 1);
+      localStorage.setItem('command_history', JSON.stringify(command_history));
     }
 
     async function command(cmd) {return await (await post("/command", {command:cmd})).text()}
