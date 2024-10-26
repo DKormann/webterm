@@ -70,6 +70,7 @@ for fname in dir(TerminalSession):
   if not fname.startswith('_'): app.route('/'+fname, methods=['POST'], endpoint = '/'+fname)(handler(fname))
 
 app.route('/')(lambda: send_from_directory('static', 'index.html'))
+app.route('/<path:path>', endpoint='logo')(lambda path: send_from_directory('static', path))
 
 if __name__ == '__main__':
   app.run(debug=os.environ.get('dev'), port=1358)
