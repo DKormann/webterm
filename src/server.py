@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 from flask import Flask, Response, stream_with_context, request, send_from_directory
 from multiprocessing import Queue
-import subprocess, queue, subprocess, threading, sys, os, time
 
-app = Flask('terminal')
+import functools, subprocess, queue, subprocess, threading, sys, os, time
+
+app = Flask('terminal', static_folder='static')
 shell = None
 threads = []
 out_q = None
@@ -69,8 +70,22 @@ def handler(name): return lambda : getattr(request_session(), name)()
 for fname in dir(TerminalSession):
   if not fname.startswith('_'): app.route('/'+fname, methods=['POST'], endpoint = '/'+fname)(handler(fname))
 
-app.route('/')(lambda: send_from_directory('static', 'index.html'))
-app.route('/<path:path>', endpoint='logo')(lambda path: send_from_directory('static', path))
+# @functools.lru_cache()
+# def getstatic(path):
+#   with open(app.static_folder + '/' + path) as f: return f.read()
+
+@app.route('/')
+def index(): 
+  # return getstatic('index.html')
+  return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def logo(path):
+  # return getstatic(path)
+  return send_from_directory(app.static_folder, path)
+
+@app.route('/get_file/<path:path>')
+def get_file(path): return send_from_directory('/', path)
 
 if __name__ == '__main__':
   dev = os.environ.get('dev')
